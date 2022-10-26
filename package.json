@@ -1,0 +1,43 @@
+{
+  "name": "@hexlet/code",
+  "version": "1.0.0",
+  "description": "Simple RSS reader as the third project in Hexlet.io",
+  "main": "src/init.js",
+  "scripts": {
+    "test": "jest --colors"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pershin-daniil/frontend-project-11.git"
+  },
+  "author": "Daniil Pershin <pershin.daniil.e@gmail.com> (https://github.com/pershin-daniil)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pershin-daniil/frontend-project-11/issues"
+  },
+  "homepage": "https://github.com/pershin-daniil/frontend-project-11#readme",
+  "devDependencies": {
+    "@babel/core": "^7.19.6",
+    "@babel/preset-env": "^7.19.4",
+    "@webpack-cli/generators": "^2.5.0",
+    "autoprefixer": "^10.4.12",
+    "babel-loader": "^8.2.5",
+    "css-loader": "^6.7.1",
+    "eslint": "^8.26.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "html-webpack-plugin": "^5.5.0",
+    "postcss-loader": "^7.0.1",
+    "prettier": "^2.7.1",
+    "sass": "^1.55.0",
+    "sass-loader": "^13.1.0",
+    "style-loader": "^3.3.1",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.6",
+    "bootstrap": "^5.2.2",
+    "webpack-dev-server": "^4.11.1"
+  }
+}
