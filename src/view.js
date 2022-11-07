@@ -1,26 +1,33 @@
 import * as yup from 'yup';
 import onChange from 'on-change';
-import ADD_FEED_STATE from './constants.js';
+
+yup.setLocale({
+  string: {
+    url: 'form.errors.notValidUrl',
+  },
+  mixed: {
+    notOneOf: 'form.errors.rssFeedExist',
+  },
+});
 
 const schema = yup.string()
-  .required('addFeedProcess.errors.required')
-  .url('addFeedProcess.errors.notValidUrl');
+  .required()
+  .url();
 
 const validate = (url, state) => {
   const urls = state.feeds.map((feed) => feed.url);
-  schema.notOneOf(urls, 'addFeedProcess.errors.rssFeedExists').validate(url)
+  schema.notOneOf(urls).validate(url)
     .then(() => {
-      state.addFeedProcess.validationState = ADD_FEED_STATE.VALID;
+      state.form.valid = true;
       state.feeds = [...state.feeds, { url: [url] }];
     })
     .catch((e) => {
-      if (e.errors[0].includes('notValidUrl')) state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
-      if (e.errors[0].includes('rssFeedExists')) state.addFeedProcess.validationState = ADD_FEED_STATE.EXISTS;
-      console.log(e.errors);
+      [state.form.error] = e.errors;
+      state.form.valid = false;
     });
 };
 
-export default (state) => {
+export default (state, i18n) => {
   const elements = {
     feedback: document.querySelector('.feedback'),
     urlInput: document.querySelector('#url-input'),
@@ -28,22 +35,16 @@ export default (state) => {
   };
 
   const watchedState = onChange(state, (path, value) => {
-    if (value === ADD_FEED_STATE.EXISTS) {
+    if (path === 'form.error') {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
-      elements.feedback.innerText = 'RSS уже существует';
+      i18n.then((t) => elements.feedback.innerText = t(value));
     }
-    if (value === ADD_FEED_STATE.INVALID) {
-      elements.urlInput.classList.add('is-invalid');
-      elements.feedback.classList.add('text-danger');
-      elements.feedback.innerText = 'Ссылка должна быть валидным URL';
-    }
-
-    if (value === ADD_FEED_STATE.VALID) {
+    if (value === true && path === 'form.valid') {
       elements.urlInput.classList.remove('is-invalid');
       elements.feedback.classList.remove('text-danger');
       elements.feedback.classList.add('text-success');
-      elements.feedback.innerText = 'RSS успешно загружен';
+      i18n.then((t) => elements.feedback.innerText = t('form.valid'));
       elements.urlInput.value = '';
     }
   });
