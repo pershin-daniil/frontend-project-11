@@ -26,8 +26,12 @@ export default () => {
               errors: {
                 rssFeedExist: 'RSS уже существует',
                 notValidUrl: 'Ссылка должна быть валидным URL',
+                networkFail: 'Ошибка сети. Попробуйте еще раз.',
               },
             },
+            feeds: 'Фиды',
+            posts: 'Посты',
+            button: 'Просмотр',
           },
         },
       },
