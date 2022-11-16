@@ -2,13 +2,13 @@
 import './scss/styles.scss';
 import i18next from 'i18next';
 import initView from './view.js';
-
 // Import all of Bootstrap's JS
 // import * as bootstrap from 'bootstrap';
 
 export default () => {
   const initialState = {
     feeds: [],
+    posts: [],
     form: {
       valid: Boolean,
       error: '',
@@ -43,6 +43,9 @@ export default () => {
       resolve(t);
     });
   });
-  //  i18n.then((t) => console.log(t('form.valid')));
-  initView(initialState, i18n);
+  return i18n
+    .then(
+      //  i18n.then((t) => console.log(t('form.valid')));
+      initView(initialState, i18n),
+    );
 };

@@ -17,8 +17,8 @@ const schema = yup.string()
   .required()
   .url();
 
-const validate = (url, state) => {
-  const urls = state.feeds.map((f) => f.feed.url);
+const isValid = (url, state) => {
+  const urls = state.feeds.map((feed) => feed.url);
   return schema.notOneOf(urls).validate(url)
     .then(() => {
       state.form.error = '';
@@ -36,83 +36,80 @@ const proxy = {
   get: (url) => `https://allorigins.hexlet.app/get?disableCashe=true&url=${encodeURIComponent(url)}`,
 };
 
-const getFeed = (url, state) => {
-  axios.get(proxy.get(url))
-    .then((response) => parser(response.data.contents))
-    .then(({ title, description, posts }) => {
-      const feed = {
-        id: uuidv4(),
-        url,
-        title,
-        description,
-      };
+const getFeed = (url, state) => axios.get(proxy.get(url))
+  .then((response) => parser(response.data.contents))
+  .then(({ title, description, posts }) => {
+    const feed = {
+      id: uuidv4(),
+      url,
+      title,
+      description,
+    };
 
-      const normalizedPosts = posts.map((post) => ({
-        id: uuidv4(),
-        feedId: feed.id,
-        ...post,
-      }));
+    const normalizedPosts = posts.map((post) => ({
+      id: uuidv4(),
+      feedId: feed.id,
+      ...post,
+    }));
 
-      state.feeds = [{ feed, posts: normalizedPosts }, ...state.feeds];
-    })
-    .then(() => state.form.error = '')
-    .catch(() => {
-      state.form.error = 'form.errors.networkFail';
-    });
+    // state.feeds = [{ feed, posts: normalizedPosts }, ...state.feeds];
+    return { feed, posts: normalizedPosts };
+  })
+  .catch(() => {
+    state.form.error = 'form.errors.networkFail';
+  });
+
+const renderFeeds = (feeds, i18n, elements) => {
+  elements.feeds.innerHTML = '';
+  const cardElement = document.createElement('div');
+  cardElement.classList.add('card', 'border-0');
+  elements.feeds.appendChild(cardElement);
+  const cardBodyElement = document.createElement('div');
+  cardBodyElement.classList.add('card-body');
+  cardElement.appendChild(cardBodyElement);
+  const cardTitleElement = document.createElement('h2');
+  cardTitleElement.classList.add('card-title', 'h4');
+  i18n.then((t) => cardTitleElement.innerText = t('feeds'));
+  cardBodyElement.appendChild(cardTitleElement);
+
+  const listElement = document.createElement('ul');
+  listElement.classList.add('list-group', 'border-0', 'rounded-0');
+  listElement.setAttribute('id', 'feed-list');
+  cardElement.appendChild(listElement);
+  feeds.map(({ title, description }) => {
+    const liElement = document.createElement('li');
+    liElement.classList.add('list-group-item', 'border-0', 'border-end-0');
+    document.querySelector('#feed-list').appendChild(liElement);
+    const h3Element = document.createElement('h3');
+    h3Element.classList.add('h6', 'm-0');
+    h3Element.innerText = title;
+    liElement.appendChild(h3Element);
+    const pElement = document.createElement('p');
+    pElement.classList.add('small', 'm-0', 'text-black-50');
+    pElement.innerText = description;
+    liElement.appendChild(pElement);
+    return true;
+  });
 };
 
-const renderFeeds = (state, i18n, elements) => {
-  if (state.length === 1) {
-    const cardElement = document.createElement('div');
-    cardElement.classList.add('card', 'border-0');
-    elements.feeds.appendChild(cardElement);
-    const cardBodyElement = document.createElement('div');
-    cardBodyElement.classList.add('card-body');
-    cardElement.appendChild(cardBodyElement);
-    const cardTitleElement = document.createElement('h2');
-    cardTitleElement.classList.add('card-title', 'h4');
-    i18n.then((t) => cardTitleElement.innerText = t('feeds'));
-    cardBodyElement.appendChild(cardTitleElement);
+const renderPosts = (posts, i18n, elements) => {
+  elements.posts.innerHTML = '';
+  const cardElement = document.createElement('div');
+  cardElement.classList.add('card', 'border-0');
+  elements.posts.appendChild(cardElement);
+  const cardBodyElement = document.createElement('div');
+  cardBodyElement.classList.add('card-body');
+  cardElement.appendChild(cardBodyElement);
+  const cardTitleElement = document.createElement('h2');
+  cardTitleElement.classList.add('card-title', 'h4');
+  i18n.then((t) => cardTitleElement.innerText = t('posts'));
+  cardBodyElement.appendChild(cardTitleElement);
 
-    const listElement = document.createElement('ul');
-    listElement.classList.add('list-group', 'border-0', 'rounded-0');
-    listElement.setAttribute('id', 'feed-list');
-    cardElement.appendChild(listElement);
-  }
-  const liElement = document.createElement('li');
-  liElement.classList.add('list-group-item', 'border-0', 'border-end-0');
-  document.querySelector('#feed-list').appendChild(liElement);
-  const h3Element = document.createElement('h3');
-  h3Element.classList.add('h6', 'm-0');
-  const [h3] = state.map((obj) => obj.feed.title);
-  h3Element.innerText = h3;
-  liElement.appendChild(h3Element);
-  const pElement = document.createElement('p');
-  pElement.classList.add('small', 'm-0', 'text-black-50');
-  const [p] = state.map((obj) => obj.feed.description);
-  pElement.innerText = p;
-  liElement.appendChild(pElement);
-};
-
-const renderPosts = (state, i18n, elements) => {
-  if (state.length === 1) {
-    const cardElement = document.createElement('div');
-    cardElement.classList.add('card', 'border-0');
-    elements.posts.appendChild(cardElement);
-    const cardBodyElement = document.createElement('div');
-    cardBodyElement.classList.add('card-body');
-    cardElement.appendChild(cardBodyElement);
-    const cardTitleElement = document.createElement('h2');
-    cardTitleElement.classList.add('card-title', 'h4');
-    i18n.then((t) => cardTitleElement.innerText = t('posts'));
-    cardBodyElement.appendChild(cardTitleElement);
-
-    const listElement = document.createElement('ul');
-    listElement.classList.add('list-group', 'border-0', 'rounded-0');
-    listElement.setAttribute('id', 'posts-list');
-    cardElement.appendChild(listElement);
-  }
-  state[0].posts.map(({
+  const listElement = document.createElement('ul');
+  listElement.classList.add('list-group', 'border-0', 'rounded-0');
+  listElement.setAttribute('id', 'posts-list');
+  cardElement.appendChild(listElement);
+  posts.map(({
     /* description, feedId, */ id, link, title,
   }) => {
     const liElement = document.createElement('li');
@@ -138,6 +135,15 @@ const renderPosts = (state, i18n, elements) => {
   });
 };
 
+const addFeed = (url, state) => {
+  isValid(url, state).then((valid) => (valid ? getFeed(url, state) : null))
+    .then(({ feed, posts }) => {
+      state.feeds = [feed, ...state.feeds];
+      state.posts = [...posts, ...state.posts];
+      state.form.error = '';
+    });
+};
+
 export default (state, i18n) => {
   const elements = {
     feedback: document.querySelector('.feedback'),
@@ -148,6 +154,8 @@ export default (state, i18n) => {
   };
 
   const watchedState = onChange(state, (path, value) => {
+    // console.log(path);
+    console.log(value);
     if (path === 'form.error' && state.form.error) {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
@@ -155,12 +163,14 @@ export default (state, i18n) => {
     }
     if (path === 'feeds' && !state.form.error) {
       renderFeeds(value, i18n, elements);
-      renderPosts(value, i18n, elements);
       elements.urlInput.classList.remove('is-invalid');
       elements.feedback.classList.remove('text-danger');
       elements.feedback.classList.add('text-success');
       i18n.then((t) => elements.feedback.innerText = t('form.valid'));
       elements.urlInput.value = '';
+    }
+    if (path === 'posts' && !state.form.error) {
+      renderPosts(value, i18n, elements);
     }
   });
 
@@ -168,10 +178,7 @@ export default (state, i18n) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const url = formData.get('url').trim().toLowerCase();
-    validate(url, watchedState).then((valid) => {
-      if (valid) {
-        getFeed(url, watchedState);
-      }
-    });
+    addFeed(url, watchedState);
   });
+  return watchedState;
 };
