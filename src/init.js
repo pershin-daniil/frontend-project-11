@@ -2,6 +2,7 @@
 import './scss/styles.scss';
 import i18next from 'i18next';
 import initView from './view.js';
+
 // Import all of Bootstrap's JS
 // import * as bootstrap from 'bootstrap';
 
@@ -14,6 +15,7 @@ export default () => {
       error: '',
     },
   };
+
   const i18n = new Promise((resolve, reject) => {
     i18next.createInstance({
       lng: 'ru',

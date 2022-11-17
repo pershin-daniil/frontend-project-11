@@ -134,9 +134,27 @@ const renderPosts = (posts, i18n, elements) => {
     return true;
   });
 };
+const updatePosts = (state) => {
+  const fetchFeeds = () => {
+    const feedResponse = state.feeds.map((feed) => getFeed(feed.url));
+    const postURLs = state.posts.map((post) => post.link);
+    const hasNotInState = (post) => !postURLs.includes(post.link);
+    Promise.all(feedResponse)
+      .then((feeds) => feeds.flatMap((feed) => feed.posts))
+      .then((posts) => posts.filter(hasNotInState))
+      .then((posts) => { state.posts = [...posts, ...state.posts]; })
+      .finally(() => updatePosts(state));
+  };
+  setTimeout(fetchFeeds, 5000);
+};
 
 const addFeed = (url, state) => {
-  isValid(url, state).then((valid) => (valid ? getFeed(url, state) : null))
+  isValid(url, state).then((valid) => {
+    if (valid) {
+      return getFeed(url, state);
+    }
+    throw new Error();
+  })
     .then(({ feed, posts }) => {
       state.feeds = [feed, ...state.feeds];
       state.posts = [...posts, ...state.posts];
@@ -155,7 +173,7 @@ export default (state, i18n) => {
 
   const watchedState = onChange(state, (path, value) => {
     // console.log(path);
-    console.log(value);
+    // console.log(value);
     if (path === 'form.error' && state.form.error) {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
@@ -179,6 +197,7 @@ export default (state, i18n) => {
     const formData = new FormData(event.target);
     const url = formData.get('url').trim().toLowerCase();
     addFeed(url, watchedState);
+    updatePosts(watchedState);
   });
   return watchedState;
 };
