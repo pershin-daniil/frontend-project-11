@@ -92,7 +92,7 @@ const renderFeeds = (feeds, i18n, elements) => {
   });
 };
 
-const renderPosts = (posts, i18n, elements) => {
+const renderPosts = (state, i18n, elements) => {
   elements.posts.innerHTML = '';
   const cardElement = document.createElement('div');
   cardElement.classList.add('card', 'border-0');
@@ -109,13 +109,16 @@ const renderPosts = (posts, i18n, elements) => {
   listElement.classList.add('list-group', 'border-0', 'rounded-0');
   listElement.setAttribute('id', 'posts-list');
   cardElement.appendChild(listElement);
-  posts.map(({
+  state.posts.map(({
     /* description, feedId, */ id, link, title,
   }) => {
     const liElement = document.createElement('li');
     liElement.classList.add('list-group-item', 'border-0', 'border-end-0', 'd-flex', 'justify-content-between', 'align-item-start');
     const aElement = document.createElement('a');
-    aElement.classList.add('fw-bold');
+
+    const isSeenPost = state.uiState.seenPosts.has(id);
+    const className = isSeenPost ? 'fw-normal' : 'fw-bold';
+    aElement.classList.add(className);
     aElement.setAttribute('href', link);
     aElement.setAttribute('data-id', id);
     aElement.setAttribute('target', '_blank');
@@ -126,8 +129,8 @@ const renderPosts = (posts, i18n, elements) => {
     button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
     button.setAttribute('type', 'button');
     button.setAttribute('data-id', id);
-    button.setAttribute('data-bs-toggle', 'modal');
-    button.setAttribute('data-bs-target', '#modal');
+    button.dataset.bsToggle = 'modal';
+    button.dataset.bsTarget = '#modal';
     i18n.then((t) => button.innerText = t('button'));
     liElement.appendChild(button);
     document.querySelector('#posts-list').appendChild(liElement);
@@ -161,7 +164,13 @@ const addFeed = (url, state) => {
       state.form.error = '';
     });
 };
-
+const previewPost = (postId, state) => {
+  state.uiState.activePostId = postId;
+  state.uiState.seenPosts.add(postId);
+};
+const clearActivePost = (state) => {
+  state.uiState.activePostId = null;
+};
 export default (state, i18n) => {
   const elements = {
     feedback: document.querySelector('.feedback'),
@@ -169,6 +178,7 @@ export default (state, i18n) => {
     form: document.querySelector('.rss-form'),
     feeds: document.querySelector('.feeds'),
     posts: document.querySelector('.posts'),
+    modal: document.getElementById('modal'),
   };
 
   const watchedState = onChange(state, (path, value) => {
@@ -186,9 +196,22 @@ export default (state, i18n) => {
       elements.feedback.classList.add('text-success');
       i18n.then((t) => elements.feedback.innerText = t('form.valid'));
       elements.urlInput.value = '';
+      elements.urlInput.removeAttribute('readonly');
+      elements.urlInput.focus();
     }
     if (path === 'posts' && !state.form.error) {
-      renderPosts(value, i18n, elements);
+      renderPosts(state, i18n, elements);
+    }
+    if (path === 'uiState.activePostId') {
+      const postId = state.uiState.activePostId;
+      const activePost = state.posts.find((post) => post.id === postId);
+      const { title, description, link } = activePost;
+      elements.modal.querySelector('.modal-title').textContent = title;
+      elements.modal.querySelector('.modal-body').textContent = description;
+      elements.modal.querySelector('.full-article').setAttribute('href', link);
+    }
+    if (path === 'uiState.seenPosts') {
+      renderPosts(state, i18n, elements);
     }
   });
 
@@ -199,5 +222,16 @@ export default (state, i18n) => {
     addFeed(url, watchedState);
     updatePosts(watchedState);
   });
+
+  elements.posts.addEventListener('click', (event) => {
+    if (!event.target.dataset.id) return;
+    const postId = event.target.dataset.id;
+    previewPost(postId, watchedState);
+  });
+
+  elements.modal.addEventListener('hidden.bs.modal', () => {
+    clearActivePost(watchedState);
+  });
+
   return watchedState;
 };
