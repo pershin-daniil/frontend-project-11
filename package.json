@@ -43,6 +43,7 @@
     "on-change": "^4.0.1",
     "uuid": "^9.0.0",
     "webpack-dev-server": "^4.11.1",
+    "@playwright/test": "^1.28.0",
     "yup": "^0.32.11"
   }
 }

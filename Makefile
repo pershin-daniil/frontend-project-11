@@ -7,3 +7,5 @@ build:
 	NODE_ENV=production npx webpack
 start:
 	npx webpack serve --mode development
+test:
+	npx playwright test
