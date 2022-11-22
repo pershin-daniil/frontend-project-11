@@ -13,7 +13,7 @@ A simple RSS reader for reading feeds. Add feeds, read posts. Posts are updated 
 
 ## Installation :heavy_check_mark:
 
-To install project on your computer clone repository and in cloned directory use this command.
+To install project on your computer, clone repository and in directory of project use this command.
 
     make install
 
