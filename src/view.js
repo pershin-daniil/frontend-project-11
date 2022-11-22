@@ -55,8 +55,10 @@ const getFeed = (url, state) => axios.get(proxy.get(url))
     // state.feeds = [{ feed, posts: normalizedPosts }, ...state.feeds];
     return { feed, posts: normalizedPosts };
   })
-  .catch(() => {
-    state.form.error = 'form.errors.networkFail';
+  .catch((e) => {
+    if (e.message === 'Network Error') {
+      state.form.error = 'form.errors.networkFail';
+    }
   });
 
 const renderFeeds = (feeds, i18n, elements) => {
@@ -156,12 +158,23 @@ const addFeed = (url, state) => {
     if (valid) {
       return getFeed(url, state);
     }
-    throw new Error();
+    throw new Error('notValid or Exist');
   })
+    .then((response) => {
+      if (response) {
+        return response;
+      }
+      throw new Error('form.errors.notValidRSS');
+    })
     .then(({ feed, posts }) => {
       state.feeds = [feed, ...state.feeds];
       state.posts = [...posts, ...state.posts];
       state.form.error = '';
+    })
+    .catch((e) => {
+      if (e.message === 'form.errors.notValidRSS') {
+        state.form.error = e.message;
+      }
     });
 };
 const previewPost = (postId, state) => {

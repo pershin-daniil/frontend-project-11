@@ -30,6 +30,7 @@ export default () => {
                 rssFeedExist: 'RSS уже существует',
                 notValidUrl: 'Ссылка должна быть валидным URL',
                 networkFail: 'Ошибка сети. Попробуйте еще раз.',
+                notValidRSS: 'Ресурс не содержит валидный RSS',
               },
             },
             feeds: 'Фиды',
