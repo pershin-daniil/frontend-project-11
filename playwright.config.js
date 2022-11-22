@@ -92,10 +92,10 @@ const config = {
   // outputDir: 'test-results/',
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'make start',
-    port: 8080,
-  },
+  // webServer: {
+  // command: 'make start',
+  // port: 8080,
+  // },
 };
 
 module.exports = config;

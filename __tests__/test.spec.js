@@ -10,7 +10,7 @@ test('page exist and has elements', async ({ page }) => {
 });
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('http://localhost:8080/');
+  await page.goto('https://frontend-project-11-roan.vercel.app/');
   await page.getByLabel('Ссылка RSS').fill('http://lorem-rss.herokuapp.com/feed');
   await page.getByRole('button', { name: 'add' }).click();
 });
