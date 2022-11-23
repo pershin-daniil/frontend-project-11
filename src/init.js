@@ -8,7 +8,6 @@ export default () => {
     feeds: [],
     posts: [],
     form: {
-      valid: Boolean,
       error: null,
     },
     uiState: {
@@ -28,8 +27,8 @@ export default () => {
               valid: 'RSS успешно загружен',
               errors: {
                 rssFeedExist: 'RSS уже существует',
-                notValidUrl: 'Ссылка должна быть валидным URL',
-                networkFail: 'Ошибка сети. Попробуйте еще раз.',
+                notValidURL: 'Ссылка должна быть валидным URL',
+                networkFail: 'Ошибка сети',
                 notValidRSS: 'Ресурс не содержит валидный RSS',
               },
             },

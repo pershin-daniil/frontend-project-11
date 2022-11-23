@@ -6,10 +6,10 @@ import parser from './parser.js';
 
 yup.setLocale({
   string: {
-    url: 'form.errors.notValidUrl',
+    url: 'notValidURL',
   },
   mixed: {
-    notOneOf: 'form.errors.rssFeedExist',
+    notOneOf: 'rssFeedExist',
   },
 });
 
@@ -21,22 +21,17 @@ const isValid = (url, state) => {
   const urls = state.feeds.map((feed) => feed.url);
   return schema.notOneOf(urls).validate(url)
     .then(() => {
-      state.form.error = '';
-      state.form.valid = true;
+      state.form.error = null;
       return true;
     })
-    .catch((e) => {
-      state.form.error = e.errors;
-      state.form.valid = false;
-      return false;
-    });
+    .catch((e) => e.errors[0]);
 };
 
 const proxy = {
-  get: (url) => `https://allorigins.hexlet.app/get?disableCashe=true&url=${encodeURIComponent(url)}`,
+  get: (url) => `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url)}`,
 };
 
-const getFeed = (url, state) => axios.get(proxy.get(url))
+const getFeed = (url) => axios.get(proxy.get(url))
   .then((response) => parser(response.data.contents))
   .then(({ title, description, posts }) => {
     const feed = {
@@ -52,14 +47,9 @@ const getFeed = (url, state) => axios.get(proxy.get(url))
       ...post,
     }));
 
-    // state.feeds = [{ feed, posts: normalizedPosts }, ...state.feeds];
     return { feed, posts: normalizedPosts };
   })
-  .catch((e) => {
-    if (e.message === 'Network Error') {
-      state.form.error = 'form.errors.networkFail';
-    }
-  });
+  .catch((e) => e);
 
 const renderFeeds = (feeds, i18n, elements) => {
   elements.feeds.innerHTML = '';
@@ -154,17 +144,24 @@ const updatePosts = (state) => {
 };
 
 const addFeed = (url, state) => {
-  isValid(url, state).then((valid) => {
-    if (valid) {
-      return getFeed(url, state);
+  isValid(url, state).then((response) => {
+    if (response === 'notValidURL') {
+      throw new Error('form.errors.notValidURL');
     }
-    throw new Error('notValid or Exist');
+    if (response === 'rssFeedExist') {
+      throw new Error('form.errors.rssFeedExist');
+    }
+    return getFeed(url, state);
   })
     .then((response) => {
-      if (response) {
-        return response;
+      console.log(response.name);
+      if (response.message === 'ParserError') {
+        throw new Error('form.errors.notValidRSS');
       }
-      throw new Error('form.errors.notValidRSS');
+      if (response.name === 'AxiosError') {
+        throw new Error('form.errors.networkFail');
+      }
+      return response;
     })
     .then(({ feed, posts }) => {
       state.feeds = [feed, ...state.feeds];
@@ -172,6 +169,16 @@ const addFeed = (url, state) => {
       state.form.error = '';
     })
     .catch((e) => {
+      // console.log(e.message);
+      if (e.message === 'form.errors.networkFail') {
+        state.form.error = e.message;
+      }
+      if (e.message === 'form.errors.rssFeedExist') {
+        state.form.error = e.message;
+      }
+      if (e.message === 'form.errors.notValidURL') {
+        state.form.error = e.message;
+      }
       if (e.message === 'form.errors.notValidRSS') {
         state.form.error = e.message;
       }

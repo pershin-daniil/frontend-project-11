@@ -7,9 +7,13 @@ const toPost = (item) => ({
 });
 
 export default (content) => {
-  const dom = parser.parseFromString(content, 'application/xml');
-  const title = dom.querySelector('title').textContent;
-  const description = dom.querySelector('description').textContent;
-  const posts = [...dom.querySelectorAll('item')].map(toPost);
-  return { title, description, posts };
+  try {
+    const dom = parser.parseFromString(content, 'application/xml');
+    const title = dom.querySelector('title').textContent;
+    const description = dom.querySelector('description').textContent;
+    const posts = [...dom.querySelectorAll('item')].map(toPost);
+    return { title, description, posts };
+  } catch {
+      throw new Error('ParserError');
+  }
 };

@@ -1,6 +1,7 @@
 {
   "name": "@hexlet/code",
   "version": "1.0.0",
+  "type": "module",
   "description": "Simple RSS reader as the third project in Hexlet.io",
   "main": "src/init.js",
   "scripts": {
