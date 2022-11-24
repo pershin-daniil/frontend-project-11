@@ -14,6 +14,6 @@ export default (content) => {
     const posts = [...dom.querySelectorAll('item')].map(toPost);
     return { title, description, posts };
   } catch {
-      throw new Error('ParserError');
+    throw new Error('ParserError');
   }
 };

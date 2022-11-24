@@ -30,6 +30,3 @@ To build project by webpack.
 
     make build
 
-For testing use
-
-    make test

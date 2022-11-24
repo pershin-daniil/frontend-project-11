@@ -61,7 +61,7 @@ const renderFeeds = (feeds, i18n, elements) => {
   cardElement.appendChild(cardBodyElement);
   const cardTitleElement = document.createElement('h2');
   cardTitleElement.classList.add('card-title', 'h4');
-  i18n.then((t) => cardTitleElement.innerText = t('feeds'));
+  i18n.then((t) => { cardTitleElement.innerText = t('feeds'); });
   cardBodyElement.appendChild(cardTitleElement);
 
   const listElement = document.createElement('ul');
@@ -94,7 +94,7 @@ const renderPosts = (state, i18n, elements) => {
   cardElement.appendChild(cardBodyElement);
   const cardTitleElement = document.createElement('h2');
   cardTitleElement.classList.add('card-title', 'h4');
-  i18n.then((t) => cardTitleElement.innerText = t('posts'));
+  i18n.then((t) => { cardTitleElement.innerText = t('posts'); });
   cardBodyElement.appendChild(cardTitleElement);
 
   const listElement = document.createElement('ul');
@@ -123,7 +123,7 @@ const renderPosts = (state, i18n, elements) => {
     button.setAttribute('data-id', id);
     button.dataset.bsToggle = 'modal';
     button.dataset.bsTarget = '#modal';
-    i18n.then((t) => button.innerText = t('button'));
+    i18n.then((t) => { button.innerText = t('button'); });
     liElement.appendChild(button);
     document.querySelector('#posts-list').appendChild(liElement);
     return true;
@@ -207,14 +207,14 @@ export default (state, i18n) => {
     if (path === 'form.error' && state.form.error) {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
-      i18n.then((t) => elements.feedback.innerText = t(value.toString()));
+      i18n.then((t) => { elements.feedback.innerText = t(value.toString()); });
     }
     if (path === 'feeds' && !state.form.error) {
       renderFeeds(value, i18n, elements);
       elements.urlInput.classList.remove('is-invalid');
       elements.feedback.classList.remove('text-danger');
       elements.feedback.classList.add('text-success');
-      i18n.then((t) => elements.feedback.innerText = t('form.valid'));
+      i18n.then((t) => { elements.feedback.innerText = t('form.valid'); });
       elements.urlInput.value = '';
       elements.urlInput.removeAttribute('readonly');
       elements.urlInput.focus();

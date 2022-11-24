@@ -7,5 +7,3 @@ build:
 	npx webpack
 start:
 	npx webpack serve --mode development
-test:
-	npx playwright test
