@@ -4,7 +4,7 @@ install:
 	npm ci
 build:
 	rm -rf dist
-	NODE_ENV=production npx webpack
+	npx webpack
 start:
 	npx webpack serve --mode development
 test:

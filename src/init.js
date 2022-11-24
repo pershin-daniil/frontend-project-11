@@ -2,6 +2,7 @@
 import './scss/styles.scss';
 import i18next from 'i18next';
 import initView from './view.js';
+import 'bootstrap/js/dist/modal.js';
 
 export default () => {
   const initialState = {
