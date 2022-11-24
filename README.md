@@ -8,7 +8,7 @@
 
 A simple RSS reader for reading feeds. Add feeds, read posts. Posts are updated automatically.
 
-[![Sreenshot](https://github.com/pershin-daniil/frontend-project-11/blob/main/__fixture__/rss_empty_home_page.png)](https://frontend-project-11-roan.vercel.app/)
+[![Sreenshot](https://ik.imagekit.io/pppershin/512FA89E-CE5D-4B34-B859-A9AA4D4B7699_16qB1h9Kb.jpeg?ik-sdk-version=javascript-1.4.3&updatedAt=1669282576995)](https://frontend-project-11-roan.vercel.app/)
 
 ## Installation :heavy_check_mark:
 
