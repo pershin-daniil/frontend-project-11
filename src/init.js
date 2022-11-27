@@ -2,19 +2,20 @@
 import './scss/styles.scss';
 import i18next from 'i18next';
 import initView from './view.js';
-import 'bootstrap/js/dist/modal.js';
 
 export default () => {
   const initialState = {
     feeds: [],
     posts: [],
-    form: {
+    addFeedProcess: {
+      state: null,
       error: null,
     },
     uiState: {
       seenPosts: new Set(),
       activePostId: null,
     },
+    updating: false,
   };
 
   const i18n = new Promise((resolve, reject) => {
@@ -48,8 +49,8 @@ export default () => {
     });
   });
   return i18n
-    .then(
-      //  i18n.then((t) => console.log(t('form.valid')));
-      initView(initialState, i18n),
-    );
+    .then((t) => {
+      // console.log(t('form.valid'));
+      initView(initialState, t);
+    });
 };

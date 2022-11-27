@@ -4,27 +4,30 @@ import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import parser from './parser.js';
 
-yup.setLocale({
-  string: {
-    url: 'notValidURL',
-  },
-  mixed: {
-    notOneOf: 'rssFeedExist',
-  },
-});
+const isValid = (url, urls) => {
+  yup.setLocale({
+    string: {
+      url: 'notValidURL',
+    },
+    mixed: {
+      notOneOf: 'rssFeedExist',
+    },
+  });
 
-const schema = yup.string()
-  .required()
-  .url();
-
-const isValid = (url, state) => {
-  const urls = state.feeds.map((feed) => feed.url);
+  const schema = yup.string()
+    .required()
+    .url();
   return schema.notOneOf(urls).validate(url)
-    .then(() => {
-      state.form.error = null;
-      return true;
-    })
-    .catch((e) => e.errors[0]);
+    .then(() => true)
+    .catch((e) => {
+      const response = e.errors[0];
+      if (response === 'notValidURL') {
+        throw new Error('form.errors.notValidURL');
+      }
+      if (response === 'rssFeedExist') {
+        throw new Error('form.errors.rssFeedExist');
+      }
+    });
 };
 
 const proxy = {
@@ -32,8 +35,8 @@ const proxy = {
 };
 
 const getFeed = (url) => axios.get(proxy.get(url))
-  .then((response) => parser(response.data.contents))
-  .then(({ title, description, posts }) => {
+  .then((response) => {
+    const { title, description, posts } = parser(response.data.contents);
     const feed = {
       id: uuidv4(),
       url,
@@ -61,14 +64,14 @@ const renderFeeds = (feeds, i18n, elements) => {
   cardElement.appendChild(cardBodyElement);
   const cardTitleElement = document.createElement('h2');
   cardTitleElement.classList.add('card-title', 'h4');
-  i18n.then((t) => { cardTitleElement.innerText = t('feeds'); });
+  cardTitleElement.innerText = i18n('feeds');
   cardBodyElement.appendChild(cardTitleElement);
 
   const listElement = document.createElement('ul');
   listElement.classList.add('list-group', 'border-0', 'rounded-0');
   listElement.setAttribute('id', 'feed-list');
   cardElement.appendChild(listElement);
-  feeds.map(({ title, description }) => {
+  feeds.forEach(({ title, description }) => {
     const liElement = document.createElement('li');
     liElement.classList.add('list-group-item', 'border-0', 'border-end-0');
     document.querySelector('#feed-list').appendChild(liElement);
@@ -80,7 +83,6 @@ const renderFeeds = (feeds, i18n, elements) => {
     pElement.classList.add('small', 'm-0', 'text-black-50');
     pElement.innerText = description;
     liElement.appendChild(pElement);
-    return true;
   });
 };
 
@@ -94,15 +96,15 @@ const renderPosts = (state, i18n, elements) => {
   cardElement.appendChild(cardBodyElement);
   const cardTitleElement = document.createElement('h2');
   cardTitleElement.classList.add('card-title', 'h4');
-  i18n.then((t) => { cardTitleElement.innerText = t('posts'); });
+  cardTitleElement.innerText = i18n('posts');
   cardBodyElement.appendChild(cardTitleElement);
 
   const listElement = document.createElement('ul');
   listElement.classList.add('list-group', 'border-0', 'rounded-0');
   listElement.setAttribute('id', 'posts-list');
   cardElement.appendChild(listElement);
-  state.posts.map(({
-    /* description, feedId, */ id, link, title,
+  state.posts.forEach(({
+    id, link, title,
   }) => {
     const liElement = document.createElement('li');
     liElement.classList.add('list-group-item', 'border-0', 'border-end-0', 'd-flex', 'justify-content-between', 'align-item-start');
@@ -123,7 +125,7 @@ const renderPosts = (state, i18n, elements) => {
     button.setAttribute('data-id', id);
     button.dataset.bsToggle = 'modal';
     button.dataset.bsTarget = '#modal';
-    i18n.then((t) => { button.innerText = t('button'); });
+    button.innerText = i18n('button');
     liElement.appendChild(button);
     document.querySelector('#posts-list').appendChild(liElement);
     return true;
@@ -135,52 +137,48 @@ const updatePosts = (state) => {
     const postURLs = state.posts.map((post) => post.link);
     const hasNotInState = (post) => !postURLs.includes(post.link);
     Promise.all(feedResponse)
-      .then((feeds) => feeds.flatMap((feed) => feed.posts))
-      .then((posts) => posts.filter(hasNotInState))
-      .then((posts) => { state.posts = [...posts, ...state.posts]; })
+      .then((feeds) => {
+        const posts = feeds
+          .flatMap((feed) => feed.posts)
+          .filter(hasNotInState);
+        state.posts = [...posts, ...state.posts];
+      })
       .finally(() => updatePosts(state));
   };
   setTimeout(fetchFeeds, 5000);
 };
 
 const addFeed = (url, state) => {
-  isValid(url, state).then((response) => {
-    if (response === 'notValidURL') {
-      throw new Error('form.errors.notValidURL');
-    }
-    if (response === 'rssFeedExist') {
-      throw new Error('form.errors.rssFeedExist');
-    }
+  const existUrls = state.feeds.map((feed) => feed.url);
+  isValid(url, existUrls).then(() => {
+    state.addFeedProcess.error = null;
     return getFeed(url, state);
   })
     .then((response) => {
-      console.log(response.name);
       if (response.message === 'ParserError') {
         throw new Error('form.errors.notValidRSS');
       }
       if (response.name === 'AxiosError') {
         throw new Error('form.errors.networkFail');
       }
-      return response;
-    })
-    .then(({ feed, posts }) => {
+      const { feed, posts } = response;
       state.feeds = [feed, ...state.feeds];
       state.posts = [...posts, ...state.posts];
-      state.form.error = '';
+      state.addFeedProcess.error = '';
     })
     .catch((e) => {
       // console.log(e.message);
       if (e.message === 'form.errors.networkFail') {
-        state.form.error = e.message;
+        state.addFeedProcess.error = e.message;
       }
       if (e.message === 'form.errors.rssFeedExist') {
-        state.form.error = e.message;
+        state.addFeedProcess.error = e.message;
       }
       if (e.message === 'form.errors.notValidURL') {
-        state.form.error = e.message;
+        state.addFeedProcess.error = e.message;
       }
       if (e.message === 'form.errors.notValidRSS') {
-        state.form.error = e.message;
+        state.addFeedProcess.error = e.message;
       }
     });
 };
@@ -204,22 +202,22 @@ export default (state, i18n) => {
   const watchedState = onChange(state, (path, value) => {
     // console.log(path);
     // console.log(value);
-    if (path === 'form.error' && state.form.error) {
+    if (path === 'addFeedProcess.error' && state.addFeedProcess.error) {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
-      i18n.then((t) => { elements.feedback.innerText = t(value.toString()); });
+      elements.feedback.innerText = i18n(value.toString());
     }
-    if (path === 'feeds' && !state.form.error) {
+    if (path === 'feeds' && !state.addFeedProcess.error) {
       renderFeeds(value, i18n, elements);
       elements.urlInput.classList.remove('is-invalid');
       elements.feedback.classList.remove('text-danger');
       elements.feedback.classList.add('text-success');
-      i18n.then((t) => { elements.feedback.innerText = t('form.valid'); });
+      elements.feedback.innerText = i18n('form.valid');
       elements.urlInput.value = '';
       elements.urlInput.removeAttribute('readonly');
       elements.urlInput.focus();
     }
-    if (path === 'posts' && !state.form.error) {
+    if (path === 'posts' && !state.addFeedProcess.error) {
       renderPosts(state, i18n, elements);
     }
     if (path === 'uiState.activePostId') {
@@ -233,6 +231,10 @@ export default (state, i18n) => {
     if (path === 'uiState.seenPosts') {
       renderPosts(state, i18n, elements);
     }
+    if (path === 'updating' && value) {
+      console.log(value);
+      updatePosts(watchedState);
+    }
   });
 
   elements.form.addEventListener('submit', (event) => {
@@ -240,7 +242,7 @@ export default (state, i18n) => {
     const formData = new FormData(event.target);
     const url = formData.get('url').trim().toLowerCase();
     addFeed(url, watchedState);
-    updatePosts(watchedState);
+    watchedState.updating = true;
   });
 
   elements.posts.addEventListener('click', (event) => {
