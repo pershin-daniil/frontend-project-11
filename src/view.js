@@ -1,34 +1,19 @@
-import * as yup from 'yup';
 import onChange from 'on-change';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import parser from './parser.js';
+import ADD_FEED_STATE from './constants.js';
 
-const isValid = (url, urls) => {
-  yup.setLocale({
-    string: {
-      url: 'notValidURL',
-    },
-    mixed: {
-      notOneOf: 'rssFeedExist',
-    },
+const isValid = (url, urls, schema) => schema.notOneOf(urls).validate(url)
+  .catch((e) => {
+    const response = e.errors[0];
+    if (response === 'notValidURL') {
+      throw new Error('form.errors.notValidURL');
+    }
+    if (response === 'rssFeedExist') {
+      throw new Error('form.errors.rssFeedExist');
+    }
   });
-
-  const schema = yup.string()
-    .required()
-    .url();
-  return schema.notOneOf(urls).validate(url)
-    .then(() => true)
-    .catch((e) => {
-      const response = e.errors[0];
-      if (response === 'notValidURL') {
-        throw new Error('form.errors.notValidURL');
-      }
-      if (response === 'rssFeedExist') {
-        throw new Error('form.errors.rssFeedExist');
-      }
-    });
-};
 
 const proxy = {
   get: (url) => `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url)}`,
@@ -148,12 +133,15 @@ const updatePosts = (state) => {
   setTimeout(fetchFeeds, 5000);
 };
 
-const addFeed = (url, state) => {
+const addFeed = (url, state, schema) => {
   const existUrls = state.feeds.map((feed) => feed.url);
-  isValid(url, existUrls).then(() => {
-    state.addFeedProcess.error = null;
-    return getFeed(url, state);
-  })
+  isValid(url, existUrls, schema)
+    .then(() => {
+      state.addFeedProcess.error = null;
+      state.addFeedProcess.validationState = ADD_FEED_STATE.VALID;
+      state.addFeedProcess.state = ADD_FEED_STATE.PROCESSING;
+      return getFeed(url, state);
+    })
     .then((response) => {
       if (response.message === 'ParserError') {
         throw new Error('form.errors.notValidRSS');
@@ -164,21 +152,25 @@ const addFeed = (url, state) => {
       const { feed, posts } = response;
       state.feeds = [feed, ...state.feeds];
       state.posts = [...posts, ...state.posts];
-      state.addFeedProcess.error = '';
+      state.addFeedProcess.state = ADD_FEED_STATE.PROCESSED;
     })
     .catch((e) => {
       // console.log(e.message);
       if (e.message === 'form.errors.networkFail') {
         state.addFeedProcess.error = e.message;
+        state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
       }
       if (e.message === 'form.errors.rssFeedExist') {
         state.addFeedProcess.error = e.message;
+        state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
       }
       if (e.message === 'form.errors.notValidURL') {
         state.addFeedProcess.error = e.message;
+        state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
       }
       if (e.message === 'form.errors.notValidRSS') {
         state.addFeedProcess.error = e.message;
+        state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
       }
     });
 };
@@ -189,7 +181,12 @@ const previewPost = (postId, state) => {
 const clearActivePost = (state) => {
   state.uiState.activePostId = null;
 };
-export default (state, i18n) => {
+const clearError = (elements) => {
+  elements.feedback.innerHTML = '';
+  elements.feedback.classList.remove('text-success', 'text-danger');
+  elements.urlInput.classList.remove('is-invalid');
+};
+export default (state, i18n, schema) => {
   const elements = {
     feedback: document.querySelector('.feedback'),
     urlInput: document.querySelector('#url-input'),
@@ -197,27 +194,21 @@ export default (state, i18n) => {
     feeds: document.querySelector('.feeds'),
     posts: document.querySelector('.posts'),
     modal: document.getElementById('modal'),
+    submitBtn: document.querySelector('.rss-form button[type="submit"]'),
   };
 
   const watchedState = onChange(state, (path, value) => {
     // console.log(path);
     // console.log(value);
-    if (path === 'addFeedProcess.error' && state.addFeedProcess.error) {
+    if (path === 'addFeedProcess.error' && value) {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
-      elements.feedback.innerText = i18n(value.toString());
+      elements.feedback.innerText = i18n(value);
     }
-    if (path === 'feeds' && !state.addFeedProcess.error) {
+    if (path === 'feeds' && value.length) {
       renderFeeds(value, i18n, elements);
-      elements.urlInput.classList.remove('is-invalid');
-      elements.feedback.classList.remove('text-danger');
-      elements.feedback.classList.add('text-success');
-      elements.feedback.innerText = i18n('form.valid');
-      elements.urlInput.value = '';
-      elements.urlInput.removeAttribute('readonly');
-      elements.urlInput.focus();
     }
-    if (path === 'posts' && !state.addFeedProcess.error) {
+    if (path === 'posts' && value.length) {
       renderPosts(state, i18n, elements);
     }
     if (path === 'uiState.activePostId') {
@@ -235,13 +226,33 @@ export default (state, i18n) => {
       console.log(value);
       updatePosts(watchedState);
     }
+    if (path === 'addFeedProcess.state') {
+      if (value === ADD_FEED_STATE.PROCESSING) {
+        clearError(elements);
+        elements.submitBtn.disabled = true;
+        elements.urlInput.setAttribute('readonly', true);
+      }
+      if (value === ADD_FEED_STATE.PROCESSED) {
+        clearError(elements);
+        elements.urlInput.value = '';
+        elements.urlInput.removeAttribute('readonly');
+        elements.urlInput.focus();
+        elements.submitBtn.disabled = false;
+        elements.feedback.classList.add('text-success');
+        elements.feedback.innerText = i18n('form.valid');
+      }
+      if (value === ADD_FEED_STATE.FAILED) {
+        elements.submitBtn.disabled = false;
+        elements.urlInput.removeAttribute('readonly');
+      }
+    }
   });
 
   elements.form.addEventListener('submit', (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
     const url = formData.get('url').trim().toLowerCase();
-    addFeed(url, watchedState);
+    addFeed(url, watchedState, schema);
     watchedState.updating = true;
   });
 

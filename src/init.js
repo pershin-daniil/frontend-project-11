@@ -1,4 +1,5 @@
 // Import our custom CSS
+import * as yup from 'yup';
 import './scss/styles.scss';
 import i18next from 'i18next';
 import initView from './view.js';
@@ -9,6 +10,7 @@ export default () => {
     posts: [],
     addFeedProcess: {
       state: null,
+      validationState: null,
       error: null,
     },
     uiState: {
@@ -48,9 +50,23 @@ export default () => {
       resolve(t);
     });
   });
+
+  yup.setLocale({
+    string: {
+      url: 'notValidURL',
+    },
+    mixed: {
+      notOneOf: 'rssFeedExist',
+    },
+  });
+
+  const schema = yup.string()
+    .required()
+    .url();
+
   return i18n
     .then((t) => {
       // console.log(t('form.valid'));
-      initView(initialState, t);
+      initView(initialState, t, schema);
     });
 };
