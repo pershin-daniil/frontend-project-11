@@ -9,7 +9,7 @@ export default () => {
     feeds: [],
     posts: [],
     addFeedProcess: {
-      state: null,
+      state: 'initialization',
       validationState: null,
       error: null,
     },
