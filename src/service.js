@@ -2,8 +2,11 @@ import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import parser from './parser.js';
 
-export const isValid = (url, urls, schema) => schema.notOneOf(urls).validate(url)
-  .catch((e) => {
+export const isValid = async (url, urls, schema) => {
+  try {
+    const result = await schema.notOneOf(urls).validate(url);
+    return result;
+  } catch (e) {
     const response = e.errors[0];
     if (response === 'notValidURL') {
       throw new Error('form.errors.notValidURL');
@@ -11,15 +14,19 @@ export const isValid = (url, urls, schema) => schema.notOneOf(urls).validate(url
     if (response === 'rssFeedExist') {
       throw new Error('form.errors.rssFeedExist');
     }
-  });
+    return e;
+  }
+};
 
 const proxy = {
   get: (url) => `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url)}`,
 };
 
-export const getFeed = (url) => axios.get(proxy.get(url))
-  .then((response) => {
+export const getFeed = async (url) => {
+  try {
+    const response = await axios.get(proxy.get(url));
     const { title, description, posts } = parser(response.data.contents);
+
     const feed = {
       id: uuidv4(),
       url,
@@ -34,8 +41,10 @@ export const getFeed = (url) => axios.get(proxy.get(url))
     }));
 
     return { feed, posts: normalizedPosts };
-  })
-  .catch((e) => e);
+  } catch (e) {
+    return e;
+  }
+};
 
 export const updatePosts = (state) => {
   const fetchFeeds = () => {
