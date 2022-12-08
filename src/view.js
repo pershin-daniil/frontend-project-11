@@ -2,10 +2,15 @@ import onChange from 'on-change';
 import ADD_FEED_STATE from './constants.js';
 import { getFeed, isValid, updatePosts } from './service.js';
 
+const createElement = (element, classList) => {
+  const newElement = document.createElement(element);
+  newElement.classList.add(...classList);
+  return newElement;
+};
+
 const renderFeeds = (feeds, i18n, elements) => {
   elements.feeds.innerHTML = '';
-  const cardElement = document.createElement('div');
-  cardElement.classList.add('card', 'border-0');
+  const cardElement = createElement('div', ['card', 'border-0']);
   elements.feeds.appendChild(cardElement);
   const cardBodyElement = document.createElement('div');
   cardBodyElement.classList.add('card-body');
