@@ -4,7 +4,7 @@ import './scss/styles.scss';
 import i18next from 'i18next';
 import initView from './view.js';
 
-export default () => {
+export default async () => {
   const initialState = {
     feeds: [],
     posts: [],
@@ -20,35 +20,27 @@ export default () => {
     updating: false,
   };
 
-  const i18n = new Promise((resolve, reject) => {
-    i18next.createInstance({
-      lng: 'ru',
-      debug: true,
-      resources: {
-        ru: {
-          translation: {
-            form: {
-              valid: 'RSS успешно загружен',
-              errors: {
-                rssFeedExist: 'RSS уже существует',
-                notValidURL: 'Ссылка должна быть валидным URL',
-                networkFail: 'Ошибка сети',
-                notValidRSS: 'Ресурс не содержит валидный RSS',
-              },
+  await i18next.init({
+    lng: 'ru',
+    debug: true,
+    resources: {
+      ru: {
+        translation: {
+          form: {
+            valid: 'RSS успешно загружен',
+            errors: {
+              rssFeedExist: 'RSS уже существует',
+              notValidURL: 'Ссылка должна быть валидным URL',
+              networkFail: 'Ошибка сети',
+              notValidRSS: 'Ресурс не содержит валидный RSS',
             },
-            feeds: 'Фиды',
-            posts: 'Посты',
-            button: 'Просмотр',
           },
+          feeds: 'Фиды',
+          posts: 'Посты',
+          button: 'Просмотр',
         },
       },
-    }, (error, t) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(t);
-    });
+    },
   });
 
   yup.setLocale({
@@ -63,9 +55,5 @@ export default () => {
   const schema = yup.string()
     .required()
     .url();
-
-  return i18n
-    .then((t) => {
-      initView(initialState, t, schema);
-    });
+  return initView(initialState, i18next.t, schema);
 };

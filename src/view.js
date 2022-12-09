@@ -2,10 +2,11 @@ import onChange from 'on-change';
 import ADD_FEED_STATE from './constants.js';
 import { getFeed, isValid, updatePosts } from './service.js';
 
-const createElement = (element, classList) => {
-  const newElement = document.createElement(element);
-  newElement.classList.add(...classList);
-  return newElement;
+const createElement = (tagName, classList = [], textContent = '') => {
+  const element = document.createElement(tagName);
+  element.classList.add(...classList);
+  element.textContent = textContent;
+  return element;
 };
 const createWrapper = (element, i18n) => {
   const cardElement = createElement('div', ['card', 'border-0']);
@@ -21,8 +22,8 @@ const createWrapper = (element, i18n) => {
 };
 const renderFeeds = (feeds, i18n, elements) => {
   elements.feeds.innerHTML = '';
-  const cardElement = createWrapper('feeds', i18n);
-  elements.feeds.appendChild(cardElement);
+  const container = createWrapper('feeds', i18n);
+  elements.feeds.appendChild(container);
 
   feeds.forEach(({ title, description }) => {
     const liElement = createElement('li', ['list-group-item', 'border-0', 'border-end-0']);
@@ -38,8 +39,8 @@ const renderFeeds = (feeds, i18n, elements) => {
 
 const renderPosts = (state, i18n, elements) => {
   elements.posts.innerHTML = '';
-  const cardElement = createWrapper('posts', i18n);
-  elements.posts.appendChild(cardElement);
+  const container = createWrapper('posts', i18n);
+  elements.posts.appendChild(container);
 
   state.posts.forEach(({
     id, link, title,
@@ -59,17 +60,39 @@ const renderPosts = (state, i18n, elements) => {
     aElement.innerText = title;
     liElement.appendChild(aElement);
 
-    const button = createElement('button', ['btn', 'btn-outline-primary', 'btn-sm']);
+    const button = createElement('button', ['btn', 'btn-outline-primary', 'btn-sm'], i18n('button'));
     button.setAttribute('type', 'button');
     button.setAttribute('data-id', id);
     button.dataset.bsToggle = 'modal';
     button.dataset.bsTarget = '#modal';
-    button.innerText = i18n('button');
     liElement.appendChild(button);
 
     document.querySelector('#posts-list').appendChild(liElement);
     return true;
   });
+};
+
+const handleError = (e, state) => {
+  switch (e.message) {
+    case 'form.errors.networkFail':
+      state.addFeedProcess.error = e.message;
+      state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
+      break;
+    case 'form.errors.rssFeedExist':
+      state.addFeedProcess.error = e.message;
+      state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
+      break;
+    case 'form.errors.notValidURL':
+      state.addFeedProcess.error = e.message;
+      state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
+      break;
+    case 'form.errors.notValidRSS':
+      state.addFeedProcess.error = e.message;
+      state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
+      break;
+    default:
+      console.log(e);
+  }
 };
 const addFeed = async (url, state, schema) => {
   try {
@@ -83,26 +106,7 @@ const addFeed = async (url, state, schema) => {
     state.posts = [...posts, ...state.posts];
     state.addFeedProcess.state = ADD_FEED_STATE.PROCESSED;
   } catch (e) {
-    switch (e.message) {
-      case 'form.errors.networkFail':
-        state.addFeedProcess.error = e.message;
-        state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
-        break;
-      case 'form.errors.rssFeedExist':
-        state.addFeedProcess.error = e.message;
-        state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
-        break;
-      case 'form.errors.notValidURL':
-        state.addFeedProcess.error = e.message;
-        state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
-        break;
-      case 'form.errors.notValidRSS':
-        state.addFeedProcess.error = e.message;
-        state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
-        break;
-      default:
-        console.log(e);
-    }
+    handleError(e, state);
   }
 };
 const previewPost = (postId, state) => {
@@ -117,6 +121,21 @@ const clearError = (elements) => {
   elements.feedback.classList.remove('text-success', 'text-danger');
   elements.urlInput.classList.remove('is-invalid');
 };
+const renderError = (elements, i18n, value) => {
+  elements.urlInput.classList.add('is-invalid');
+  elements.feedback.classList.add('text-danger');
+  elements.feedback.innerText = i18n(value);
+};
+const buttonToggler = {
+  disable: (elements) => {
+    elements.submitBtn.disabled = true;
+    elements.urlInput.setAttribute('readonly', true);
+  },
+  allow: (elements) => {
+    elements.submitBtn.disabled = false;
+    elements.urlInput.removeAttribute('readonly');
+  },
+};
 export default (state, i18n, schema) => {
   const elements = {
     feedback: document.querySelector('.feedback'),
@@ -129,17 +148,9 @@ export default (state, i18n, schema) => {
   };
 
   const watchedState = onChange(state, (path, value) => {
-    if (path === 'addFeedProcess.error' && value) {
-      elements.urlInput.classList.add('is-invalid');
-      elements.feedback.classList.add('text-danger');
-      elements.feedback.innerText = i18n(value);
-    }
-    if (path === 'feeds' && value.length) {
-      renderFeeds(value, i18n, elements);
-    }
-    if (path === 'posts' && value.length) {
-      renderPosts(state, i18n, elements);
-    }
+    if (path === 'addFeedProcess.error' && value) renderError(elements, i18n, value);
+    if (path === 'feeds' && value.length) renderFeeds(value, i18n, elements);
+    if ((path === 'posts' && value.length) || (path === 'uiState.seenPosts')) renderPosts(state, i18n, elements);
     if (path === 'uiState.activePostId') {
       const postId = state.uiState.activePostId;
       const activePost = state.posts.find((post) => post.id === postId);
@@ -148,31 +159,21 @@ export default (state, i18n, schema) => {
       elements.modal.querySelector('.modal-body').textContent = description;
       elements.modal.querySelector('.full-article').setAttribute('href', link);
     }
-    if (path === 'uiState.seenPosts') {
-      renderPosts(state, i18n, elements);
-    }
-    if (path === 'updating' && value) {
-      updatePosts(watchedState);
-    }
+    if (path === 'updating' && value) updatePosts(watchedState);
     if (path === 'addFeedProcess.state') {
       if (value === ADD_FEED_STATE.PROCESSING) {
         clearError(elements);
-        elements.submitBtn.disabled = true;
-        elements.urlInput.setAttribute('readonly', true);
+        buttonToggler.disable(elements);
       }
       if (value === ADD_FEED_STATE.PROCESSED) {
         clearError(elements);
+        buttonToggler.allow(elements);
         elements.urlInput.value = '';
-        elements.urlInput.removeAttribute('readonly');
         elements.urlInput.focus();
-        elements.submitBtn.disabled = false;
         elements.feedback.classList.add('text-success');
         elements.feedback.innerText = i18n('form.valid');
       }
-      if (value === ADD_FEED_STATE.FAILED) {
-        elements.submitBtn.disabled = false;
-        elements.urlInput.removeAttribute('readonly');
-      }
+      if (value === ADD_FEED_STATE.FAILED) buttonToggler.allow(elements);
     }
   });
 
