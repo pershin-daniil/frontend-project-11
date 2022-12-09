@@ -66,7 +66,6 @@ export default () => {
 
   return i18n
     .then((t) => {
-      // console.log(t('form.valid'));
       initView(initialState, t, schema);
     });
 };

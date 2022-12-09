@@ -7,33 +7,30 @@ const createElement = (element, classList) => {
   newElement.classList.add(...classList);
   return newElement;
 };
-
+const createWrapper = (element, i18n) => {
+  const cardElement = createElement('div', ['card', 'border-0']);
+  const cardBodyElement = createElement('div', ['card-body']);
+  cardElement.appendChild(cardBodyElement);
+  const cardTitleElement = createElement('h2', ['card-title', 'h4']);
+  cardTitleElement.innerText = i18n(element);
+  cardBodyElement.appendChild(cardTitleElement);
+  const listElement = createElement('ul', ['list-group', 'border-0', 'rounded-0']);
+  listElement.setAttribute('id', `${element}-list`);
+  cardElement.appendChild(listElement);
+  return cardElement;
+};
 const renderFeeds = (feeds, i18n, elements) => {
   elements.feeds.innerHTML = '';
-  const cardElement = createElement('div', ['card', 'border-0']);
+  const cardElement = createWrapper('feeds', i18n);
   elements.feeds.appendChild(cardElement);
-  const cardBodyElement = document.createElement('div');
-  cardBodyElement.classList.add('card-body');
-  cardElement.appendChild(cardBodyElement);
-  const cardTitleElement = document.createElement('h2');
-  cardTitleElement.classList.add('card-title', 'h4');
-  cardTitleElement.innerText = i18n('feeds');
-  cardBodyElement.appendChild(cardTitleElement);
 
-  const listElement = document.createElement('ul');
-  listElement.classList.add('list-group', 'border-0', 'rounded-0');
-  listElement.setAttribute('id', 'feed-list');
-  cardElement.appendChild(listElement);
   feeds.forEach(({ title, description }) => {
-    const liElement = document.createElement('li');
-    liElement.classList.add('list-group-item', 'border-0', 'border-end-0');
-    document.querySelector('#feed-list').appendChild(liElement);
-    const h3Element = document.createElement('h3');
-    h3Element.classList.add('h6', 'm-0');
+    const liElement = createElement('li', ['list-group-item', 'border-0', 'border-end-0']);
+    document.querySelector('#feeds-list').appendChild(liElement);
+    const h3Element = createElement('h3', ['h6', 'm-0']);
     h3Element.innerText = title;
     liElement.appendChild(h3Element);
-    const pElement = document.createElement('p');
-    pElement.classList.add('small', 'm-0', 'text-black-50');
+    const pElement = createElement('p', ['small', 'm-0', 'text-black-50']);
     pElement.innerText = description;
     liElement.appendChild(pElement);
   });
@@ -41,96 +38,79 @@ const renderFeeds = (feeds, i18n, elements) => {
 
 const renderPosts = (state, i18n, elements) => {
   elements.posts.innerHTML = '';
-  const cardElement = document.createElement('div');
-  cardElement.classList.add('card', 'border-0');
+  const cardElement = createWrapper('posts', i18n);
   elements.posts.appendChild(cardElement);
-  const cardBodyElement = document.createElement('div');
-  cardBodyElement.classList.add('card-body');
-  cardElement.appendChild(cardBodyElement);
-  const cardTitleElement = document.createElement('h2');
-  cardTitleElement.classList.add('card-title', 'h4');
-  cardTitleElement.innerText = i18n('posts');
-  cardBodyElement.appendChild(cardTitleElement);
 
-  const listElement = document.createElement('ul');
-  listElement.classList.add('list-group', 'border-0', 'rounded-0');
-  listElement.setAttribute('id', 'posts-list');
-  cardElement.appendChild(listElement);
   state.posts.forEach(({
     id, link, title,
   }) => {
-    const liElement = document.createElement('li');
-    liElement.classList.add('list-group-item', 'border-0', 'border-end-0', 'd-flex', 'justify-content-between', 'align-item-start');
-    const aElement = document.createElement('a');
+    const liElement = createElement('li', [
+      'list-group-item', 'border-0', 'border-end-0', 'd-flex', 'justify-content-between', 'align-item-start',
+    ]);
 
     const isSeenPost = state.uiState.seenPosts.has(id);
     const className = isSeenPost ? 'fw-normal' : 'fw-bold';
-    aElement.classList.add(className);
+
+    const aElement = createElement('a', [className]);
     aElement.setAttribute('href', link);
     aElement.setAttribute('data-id', id);
     aElement.setAttribute('target', '_blank');
     aElement.setAttribute('rel', 'noopener noreferrer');
     aElement.innerText = title;
     liElement.appendChild(aElement);
-    const button = document.createElement('button');
-    button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
+
+    const button = createElement('button', ['btn', 'btn-outline-primary', 'btn-sm']);
     button.setAttribute('type', 'button');
     button.setAttribute('data-id', id);
     button.dataset.bsToggle = 'modal';
     button.dataset.bsTarget = '#modal';
     button.innerText = i18n('button');
     liElement.appendChild(button);
+
     document.querySelector('#posts-list').appendChild(liElement);
     return true;
   });
 };
-const addFeed = (url, state, schema) => {
-  const existUrls = state.feeds.map((feed) => feed.url);
-  isValid(url, existUrls, schema)
-    .then(() => {
-      state.addFeedProcess.error = null;
-      state.addFeedProcess.validationState = ADD_FEED_STATE.VALID;
-      state.addFeedProcess.state = ADD_FEED_STATE.PROCESSING;
-      return getFeed(url, state);
-    })
-    .then((response) => {
-      if (response.message === 'ParserError') {
-        throw new Error('form.errors.notValidRSS');
-      }
-      if (response.name === 'AxiosError') {
-        throw new Error('form.errors.networkFail');
-      }
-      const { feed, posts } = response;
-      state.feeds = [feed, ...state.feeds];
-      state.posts = [...posts, ...state.posts];
-      state.addFeedProcess.state = ADD_FEED_STATE.PROCESSED;
-    })
-    .catch((e) => {
-      // console.log(e.message);
-      if (e.message === 'form.errors.networkFail') {
+const addFeed = async (url, state, schema) => {
+  try {
+    const existUrls = state.feeds.map((feed) => feed.url);
+    await isValid(url, existUrls, schema);
+    state.addFeedProcess.error = '';
+    state.addFeedProcess.validationState = ADD_FEED_STATE.VALID;
+    state.addFeedProcess.state = ADD_FEED_STATE.PROCESSING;
+    const { feed, posts } = await getFeed(url, state);
+    state.feeds = [feed, ...state.feeds];
+    state.posts = [...posts, ...state.posts];
+    state.addFeedProcess.state = ADD_FEED_STATE.PROCESSED;
+  } catch (e) {
+    switch (e.message) {
+      case 'form.errors.networkFail':
         state.addFeedProcess.error = e.message;
         state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
-      }
-      if (e.message === 'form.errors.rssFeedExist') {
+        break;
+      case 'form.errors.rssFeedExist':
         state.addFeedProcess.error = e.message;
         state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
-      }
-      if (e.message === 'form.errors.notValidURL') {
+        break;
+      case 'form.errors.notValidURL':
         state.addFeedProcess.error = e.message;
         state.addFeedProcess.validationState = ADD_FEED_STATE.INVALID;
-      }
-      if (e.message === 'form.errors.notValidRSS') {
+        break;
+      case 'form.errors.notValidRSS':
         state.addFeedProcess.error = e.message;
         state.addFeedProcess.state = ADD_FEED_STATE.FAILED;
-      }
-    });
+        break;
+      default:
+        console.log(e);
+    }
+  }
 };
 const previewPost = (postId, state) => {
   state.uiState.activePostId = postId;
   state.uiState.seenPosts.add(postId);
 };
 const clearActivePost = (state) => {
-  state.uiState.activePostId = null;
+  state.uiState.activePostId = '';
 };
 const clearError = (elements) => {
   elements.feedback.innerHTML = '';
@@ -149,8 +129,6 @@ export default (state, i18n, schema) => {
   };
 
   const watchedState = onChange(state, (path, value) => {
-    // console.log(path);
-    // console.log(value);
     if (path === 'addFeedProcess.error' && value) {
       elements.urlInput.classList.add('is-invalid');
       elements.feedback.classList.add('text-danger');
@@ -174,7 +152,6 @@ export default (state, i18n, schema) => {
       renderPosts(state, i18n, elements);
     }
     if (path === 'updating' && value) {
-      console.log(value);
       updatePosts(watchedState);
     }
     if (path === 'addFeedProcess.state') {

@@ -14,7 +14,7 @@ export const isValid = async (url, urls, schema) => {
     if (response === 'rssFeedExist') {
       throw new Error('form.errors.rssFeedExist');
     }
-    return e;
+    throw e;
   }
 };
 
@@ -42,7 +42,13 @@ export const getFeed = async (url) => {
 
     return { feed, posts: normalizedPosts };
   } catch (e) {
-    return e;
+    if (e.message === 'ParserError') {
+      throw new Error('form.errors.notValidRSS');
+    }
+    if (e.name === 'AxiosError') {
+      throw new Error('form.errors.networkFail');
+    }
+    throw e;
   }
 };
 
